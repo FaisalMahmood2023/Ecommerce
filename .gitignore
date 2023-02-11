@@ -10,4 +10,5 @@ cache
 artifacts
 
 *.txt
+/app.txt
 
