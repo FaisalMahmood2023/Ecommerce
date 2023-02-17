@@ -24,6 +24,9 @@ const sellerName = "Faisal";
 const sellerIdentityNo = 121;
 const sellerCountry = "Pakistan";
 
+//Buyer purchase Qunatity
+const qty = 2;
+
 describe("MFCollection", () => {
   let mfCollection;
   let owner, seller, buyer;
@@ -137,6 +140,79 @@ describe("MFCollection", () => {
 
     it("Emit Product List", async () => {
       expect(transcation).to.emit(mfCollection, "ListProduct");
+    });
+  });
+
+  describe("Listing a Product", () => {
+    let transcation, sellerInformation, approveSeller;
+
+    beforeEach(async () => {
+      // seller Information
+      sellerInformation = await mfCollection
+        .connect(seller)
+        .sellerInformation(sellerName, sellerIdentityNo, sellerCountry);
+      await sellerInformation.wait();
+
+      // const sellerId = await mfCollection.sellersId(seller.address);
+      // console.log(sellerId.toString());
+
+      // approve seller
+      approveSeller = await mfCollection
+        .connect(owner)
+        .approveSeller(sellerIdentityNo);
+
+      await approveSeller.wait();
+
+      //Listing Product
+      transcation = await mfCollection
+        .connect(seller)
+        .listProduct(
+          name,
+          title,
+          description,
+          category,
+          image,
+          cost,
+          rating,
+          stock
+        );
+      await transcation.wait();
+
+      //Buy Product
+      const item = await mfCollection.items(1);
+      const id = item.id;
+
+      transcation = await mfCollection
+        .connect(buyer)
+        .buyProduct(id, qty, { value: qty * cost });
+      await transcation.wait();
+    });
+
+    it("Update the Contract Balance", async () => {
+      const result = await ethers.provider.getBalance(mfCollection.address);
+      // console.log(result.toString());
+      expect(result).to.equal(cost * qty);
+    });
+
+    it("Buyer Order Count", async () => {
+      const result = await mfCollection.orderCount(buyer.address);
+      // console.log(result.toString());
+      expect(result).to.equal(1);
+    });
+    it("Orders Details", async () => {
+      const order = await mfCollection.orders(buyer.address, 1);
+      // console.log(result.toString());
+      expect(order.time).to.greaterThan(0);
+      expect(order.item.name).to.equal(name);
+      expect(order.item.seller).to.equal(seller.address);
+      expect(order.buyer).to.equal(buyer.address);
+      expect(order.quantity).to.equal(qty);
+      expect(order.productDelivered).to.equal(false);
+      expect(order.paymentCompleted).to.equal(false);
+    });
+
+    it("Emits Buy Event", () => {
+      expect(transcation).to.emit(mfCollection, "Buy");
     });
   });
 });
