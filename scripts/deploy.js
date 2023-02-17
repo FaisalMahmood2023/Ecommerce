@@ -31,6 +31,7 @@ async function main() {
   const approveSeller = await contract
     .connect(owner)
     .approveSeller(sellerId.toString());
+
   await approveSeller.wait();
 
   // Listing items...
