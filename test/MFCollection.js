@@ -143,7 +143,7 @@ describe("MFCollection", () => {
     });
   });
 
-  describe("Listing a Product", () => {
+  describe("Buy a Product", () => {
     let transcation, sellerInformation, approveSeller;
 
     beforeEach(async () => {
@@ -213,6 +213,137 @@ describe("MFCollection", () => {
 
     it("Emits Buy Event", () => {
       expect(transcation).to.emit(mfCollection, "Buy");
+    });
+  });
+
+  describe("Deliver Status", () => {
+    let transcation, sellerInformation, approveSeller;
+
+    beforeEach(async () => {
+      // seller Information
+      sellerInformation = await mfCollection
+        .connect(seller)
+        .sellerInformation(sellerName, sellerIdentityNo, sellerCountry);
+      await sellerInformation.wait();
+
+      // const sellerId = await mfCollection.sellersId(seller.address);
+      // console.log(sellerId.toString());
+
+      // approve seller
+      approveSeller = await mfCollection
+        .connect(owner)
+        .approveSeller(sellerIdentityNo);
+
+      await approveSeller.wait();
+
+      //Listing Product
+      transcation = await mfCollection
+        .connect(seller)
+        .listProduct(
+          name,
+          title,
+          description,
+          category,
+          image,
+          cost,
+          rating,
+          stock
+        );
+      await transcation.wait();
+
+      //Buy Product
+      const item = await mfCollection.items(1);
+      const id = item.id;
+
+      transcation = await mfCollection
+        .connect(buyer)
+        .buyProduct(id, qty, { value: qty * cost });
+      await transcation.wait();
+
+      // Delivery Status
+      const orderCount = await mfCollection.orderCount(buyer.address);
+      transcation = await mfCollection
+        .connect(buyer)
+        .delivery(orderCount.toString());
+    });
+
+    it("Delivery Status", async () => {
+      const order = await mfCollection.orders(buyer.address, 1);
+      // console.log(result.toString());
+      expect(order.productDelivered).to.equal(true);
+    });
+
+    it("Emits Delivery Event", () => {
+      expect(transcation).to.emit(mfCollection, "Delivered");
+    });
+  });
+
+  describe("Withdraw", () => {
+    let transcation, sellerInformation, approveSeller;
+
+    beforeEach(async () => {
+      // seller Information
+      sellerInformation = await mfCollection
+        .connect(seller)
+        .sellerInformation(sellerName, sellerIdentityNo, sellerCountry);
+      await sellerInformation.wait();
+
+      // const sellerId = await mfCollection.sellersId(seller.address);
+      // console.log(sellerId.toString());
+
+      // approve seller
+      approveSeller = await mfCollection
+        .connect(owner)
+        .approveSeller(sellerIdentityNo);
+
+      await approveSeller.wait();
+
+      //Listing Product
+      transcation = await mfCollection
+        .connect(seller)
+        .listProduct(
+          name,
+          title,
+          description,
+          category,
+          image,
+          cost,
+          rating,
+          stock
+        );
+      await transcation.wait();
+
+      //Buy Product
+      const item = await mfCollection.items(1);
+      const id = item.id;
+
+      transcation = await mfCollection
+        .connect(buyer)
+        .buyProduct(id, qty, { value: qty * cost });
+      await transcation.wait();
+
+      // Delivery Status
+      const orderCount = await mfCollection.orderCount(buyer.address);
+      transcation = await mfCollection
+        .connect(buyer)
+        .delivery(orderCount.toString());
+      await transcation.wait();
+
+      // Get Deployer balance before
+      balanceBeforeOwner = await ethers.provider.getBalance(owner.address);
+      balanceBeforeSeller = await ethers.provider.getBalance(seller.address);
+
+      //Withdraw
+      transcation = await mfCollection
+        .connect(seller)
+        .withdraw(buyer.address, orderCount);
+      await transcation.wait();
+    });
+
+    it("Update the Contract Balance", async () => {
+      const result = await ethers.provider.getBalance(mfCollection.address);
+      // console.log(result.toString());
+      expect(result).to.equal(0);
     });
   });
 });
