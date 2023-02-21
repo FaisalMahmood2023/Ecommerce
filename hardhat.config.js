@@ -13,7 +13,7 @@ module.exports = {
       accounts: [PRIVATE_KEY],
     },
     hardhat: {
-      chainId: 1337,
+      chainId: 31337,
     },
   },
   paths: {
